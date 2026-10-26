@@ -81,6 +81,16 @@ def ensure_contract_schema(connection: sqlite3.Connection) -> None:
             PRIMARY KEY (scene_id, source_id)
         )
     """)
+    connection.execute("""
+        CREATE TABLE IF NOT EXISTS scene_transcript_segments (
+            scene_id TEXT NOT NULL REFERENCES scenes(scene_id) ON DELETE CASCADE,
+            transcript_id TEXT NOT NULL,
+            segment_id TEXT NOT NULL,
+            FOREIGN KEY (transcript_id, segment_id)
+                REFERENCES transcript_segments(transcript_id, segment_id) ON DELETE RESTRICT,
+            PRIMARY KEY (scene_id, transcript_id, segment_id)
+        )
+    """)
     connection.execute(
         "CREATE INDEX IF NOT EXISTS idx_transcript_segments_version_time "
         "ON transcript_segments(transcript_id, start_seconds, end_seconds)"

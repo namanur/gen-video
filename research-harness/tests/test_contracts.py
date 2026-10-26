@@ -143,7 +143,21 @@ class TestEpisodeSchema(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             db = Path(temp) / "legacy.sqlite3"
             with sqlite3.connect(db) as connection:
-                connection.executescript(init_episode.SCHEMA)
+                # Reproduce the original schema: no transcripts table and a segment_id-only key.
+                connection.executescript("""
+                    CREATE TABLE sources(source_id TEXT PRIMARY KEY);
+                    CREATE TABLE scenes(
+                        scene_id TEXT PRIMARY KEY, start_seconds REAL NOT NULL, end_seconds REAL NOT NULL,
+                        narration_text TEXT, visual_goal TEXT NOT NULL,
+                        on_screen_text_json TEXT NOT NULL DEFAULT '[]',
+                        status TEXT NOT NULL DEFAULT 'draft', notes TEXT
+                    );
+                    CREATE TABLE transcript_segments(
+                        segment_id TEXT PRIMARY KEY, start_seconds REAL NOT NULL, end_seconds REAL NOT NULL,
+                        text TEXT NOT NULL, words_json TEXT NOT NULL DEFAULT '[]', speaker TEXT, confidence REAL,
+                        created_at TEXT NOT NULL
+                    );
+                """)
                 connection.execute(
                     "INSERT INTO transcript_segments(segment_id, start_seconds, end_seconds, text, created_at) "
                     "VALUES('old-1', 0, 1, 'Old unbound timing', '2026-10-25T00:00:00+00:00')"

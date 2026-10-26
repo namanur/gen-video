@@ -188,6 +188,7 @@ def import_transcript(
     final_transcript_id = transcript_id or str(audio_meta.get("transcript_id") or generated_id)
     if not final_transcript_id.strip():
         raise ValueError("transcript ID must not be empty")
+    canonical_payload["audio"]["transcript_id"] = final_transcript_id
 
     now = datetime.now(timezone.utc).isoformat()
     with sqlite3.connect(db_path) as connection:
@@ -211,6 +212,7 @@ def import_transcript(
                     (audio_relative_path, actual_sha, duration, language, alignment_method, now, final_transcript_id)
                 )
                 connection.execute("DELETE FROM scenes WHERE transcript_id=?", (final_transcript_id,))
+                connection.execute("DELETE FROM scene_plans WHERE transcript_id=?", (final_transcript_id,))
             else:
                 connection.execute(
                     "INSERT INTO transcripts(transcript_id, audio_relative_path, audio_sha256, duration_seconds, "

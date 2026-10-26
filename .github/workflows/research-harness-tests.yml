@@ -1,0 +1,35 @@
+name: Research Harness Contracts
+
+on:
+  push:
+    branches:
+      - main
+      - feat/research-asset-video-harness
+    paths:
+      - "research-harness/**"
+      - ".github/workflows/research-harness-tests.yml"
+  pull_request:
+    paths:
+      - "research-harness/**"
+      - ".github/workflows/research-harness-tests.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: research-harness
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile scripts and tests
+        run: python -m compileall -q scripts tests
+      - name: Run contract tests
+        run: python -m unittest discover -s tests -v

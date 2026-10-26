@@ -142,7 +142,7 @@ def validate_scene_plan(
         asset_ids = {
             asset_id
             for scene in scene_list if isinstance(scene, dict)
-            for asset_id in scene.get("asset_ids", [])
+            for asset_id in (scene.get("asset_ids", []) if isinstance(scene.get("asset_ids", []), list) else [])
             if isinstance(asset_id, str)
         }
         assets: dict[str, sqlite3.Row] = {}
@@ -157,7 +157,10 @@ def validate_scene_plan(
         source_ids = {
             source_id
             for scene in scene_list if isinstance(scene, dict)
-            for source_id in scene.get("citation_source_ids", [])
+            for source_id in (
+                scene.get("citation_source_ids", [])
+                if isinstance(scene.get("citation_source_ids", []), list) else []
+            )
             if isinstance(source_id, str)
         }
         sources: set[str] = set()

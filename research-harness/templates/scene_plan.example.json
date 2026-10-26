@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "project_slug": "ragebait-001",
+  "canvas": {"width": 1920, "height": 1080, "fps": 30},
+  "audio": {
+    "path": "narration/final/my-voice-v001.wav",
+    "duration_seconds": 600
+  },
+  "scenes": [
+    {
+      "scene_id": "SC001",
+      "start_seconds": 0.0,
+      "end_seconds": 9.5,
+      "transcript_segment_ids": ["seg-0001", "seg-0002"],
+      "narration_text": "Replace with the actual timed transcript.",
+      "visual_goal": "Show the gap between a calm explanation and an outrage-driven feed.",
+      "asset_ids": ["A-REPLACEWITHID"],
+      "on_screen_text": ["WHY DOES RAGEBAIT WORK?"],
+      "citation_source_ids": [],
+      "motion": "slow push-in; title enters after 0.6 seconds",
+      "notes": "Placeholder only. Use a real approved catalog record."
+    },
+    {
+      "scene_id": "SC002",
+      "start_seconds": 9.5,
+      "end_seconds": 22.0,
+      "transcript_segment_ids": ["seg-0003"],
+      "narration_text": "Continue with the next point from the real recording.",
+      "visual_goal": "Show an original diagram separating attention, emotion, and platform incentives.",
+      "asset_ids": [],
+      "graphic_spec": {
+        "type": "diagram",
+        "description": "Three connected nodes: emotional trigger, response, and distribution feedback.",
+        "source_data": "Create from verified research; do not imply this simple diagram proves causality."
+      },
+      "on_screen_text": [],
+      "citation_source_ids": [],
+      "motion": "nodes appear in narration order",
+      "notes": "Use only after the diagram is created and reviewed."
+    }
+  ]
+}

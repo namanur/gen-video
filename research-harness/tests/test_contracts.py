@@ -15,7 +15,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve()
 HARNESS = HERE.parents[1]
 SCRIPTS = HARNESS / "scripts"
-FIXTURES = HERE / "fixtures"
+FIXTURES = HERE.parent / "fixtures"
 sys.path.insert(0, str(SCRIPTS))
 
 

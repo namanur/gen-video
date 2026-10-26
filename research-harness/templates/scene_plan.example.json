@@ -1,9 +1,12 @@
 {
   "version": 1,
+  "plan_id": "plan-v001",
   "project_slug": "ragebait-001",
+  "transcript_id": "TR-REPLACE_WITH_IMPORTED_TRANSCRIPT_ID",
   "canvas": {"width": 1920, "height": 1080, "fps": 30},
   "audio": {
     "path": "narration/final/my-voice-v001.wav",
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
     "duration_seconds": 600
   },
   "scenes": [

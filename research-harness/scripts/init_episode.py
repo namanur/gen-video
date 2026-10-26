@@ -44,15 +44,30 @@ CREATE TABLE IF NOT EXISTS citations (
     source_id TEXT NOT NULL REFERENCES sources(source_id) ON DELETE CASCADE,
     locator TEXT NOT NULL, exact_quote TEXT, citation_style TEXT, note TEXT
 );
+CREATE TABLE IF NOT EXISTS transcripts (
+    transcript_id TEXT PRIMARY KEY, audio_relative_path TEXT NOT NULL, audio_sha256 TEXT NOT NULL,
+    duration_seconds REAL NOT NULL CHECK(duration_seconds > 0), language TEXT NOT NULL DEFAULT 'en',
+    alignment_method TEXT NOT NULL, created_at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS transcript_segments (
-    segment_id TEXT PRIMARY KEY, start_seconds REAL NOT NULL, end_seconds REAL NOT NULL,
+    transcript_id TEXT NOT NULL REFERENCES transcripts(transcript_id) ON DELETE CASCADE,
+    segment_id TEXT NOT NULL, start_seconds REAL NOT NULL, end_seconds REAL NOT NULL,
     text TEXT NOT NULL, words_json TEXT NOT NULL DEFAULT '[]', speaker TEXT, confidence REAL,
-    created_at TEXT NOT NULL, CHECK(start_seconds >= 0), CHECK(end_seconds > start_seconds)
+    created_at TEXT NOT NULL, PRIMARY KEY (transcript_id, segment_id),
+    CHECK(start_seconds >= 0), CHECK(end_seconds > start_seconds)
+);
+CREATE TABLE IF NOT EXISTS scene_plans (
+    plan_id TEXT PRIMARY KEY, transcript_id TEXT NOT NULL REFERENCES transcripts(transcript_id) ON DELETE RESTRICT,
+    audio_relative_path TEXT NOT NULL, audio_sha256 TEXT NOT NULL,
+    duration_seconds REAL NOT NULL CHECK(duration_seconds > 0),
+    plan_sha256 TEXT NOT NULL, plan_path TEXT NOT NULL, created_at TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS scenes (
     scene_id TEXT PRIMARY KEY, start_seconds REAL NOT NULL, end_seconds REAL NOT NULL,
     narration_text TEXT, visual_goal TEXT NOT NULL, on_screen_text_json TEXT NOT NULL DEFAULT '[]',
     status TEXT NOT NULL DEFAULT 'draft', notes TEXT,
+    plan_id TEXT REFERENCES scene_plans(plan_id) ON DELETE CASCADE,
+    transcript_id TEXT REFERENCES transcripts(transcript_id) ON DELETE RESTRICT,
     CHECK(start_seconds >= 0), CHECK(end_seconds > start_seconds)
 );
 CREATE TABLE IF NOT EXISTS scene_assets (
@@ -60,6 +75,18 @@ CREATE TABLE IF NOT EXISTS scene_assets (
     asset_id TEXT NOT NULL REFERENCES assets(asset_id) ON DELETE RESTRICT,
     role TEXT NOT NULL DEFAULT 'primary', timing_json TEXT NOT NULL DEFAULT '{}',
     PRIMARY KEY (scene_id, asset_id, role)
+);
+CREATE TABLE IF NOT EXISTS scene_citations (
+    scene_id TEXT NOT NULL REFERENCES scenes(scene_id) ON DELETE CASCADE,
+    source_id TEXT NOT NULL REFERENCES sources(source_id) ON DELETE RESTRICT,
+    PRIMARY KEY (scene_id, source_id)
+);
+CREATE TABLE IF NOT EXISTS scene_transcript_segments (
+    scene_id TEXT NOT NULL REFERENCES scenes(scene_id) ON DELETE CASCADE,
+    transcript_id TEXT NOT NULL, segment_id TEXT NOT NULL,
+    FOREIGN KEY (transcript_id, segment_id)
+        REFERENCES transcript_segments(transcript_id, segment_id) ON DELETE RESTRICT,
+    PRIMARY KEY (scene_id, transcript_id, segment_id)
 );
 CREATE TABLE IF NOT EXISTS activity_log (
     event_id INTEGER PRIMARY KEY AUTOINCREMENT, created_at TEXT NOT NULL, actor TEXT NOT NULL,

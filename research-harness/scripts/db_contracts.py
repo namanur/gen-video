@@ -30,9 +30,9 @@ def ensure_contract_schema(connection: sqlite3.Connection) -> None:
         "SELECT 1 FROM sqlite_master WHERE type='table' AND name='transcript_segments'"
     ).fetchone():
         cols = _columns(connection, "transcript_segments")
-        segment_pk = cols.get("segment_id", {}).get("pk", 0) if cols else 0
-        transcript_pk = cols.get("transcript_id", {}).get("pk", 0) if cols else 0
-        if "transcript_id" not in cols or not transcript_pk or segment_pk:
+        segment_pk = cols["segment_id"]["pk"] if "segment_id" in cols else 0
+        transcript_pk = cols["transcript_id"]["pk"] if "transcript_id" in cols else 0
+        if "transcript_id" not in cols or not transcript_pk or segment_pk == 1:
             archive_name = "transcript_segments_legacy_unbound"
             if connection.execute(
                 "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
@@ -85,6 +85,4 @@ def ensure_contract_schema(connection: sqlite3.Connection) -> None:
         "CREATE INDEX IF NOT EXISTS idx_transcript_segments_version_time "
         "ON transcript_segments(transcript_id, start_seconds, end_seconds)"
     )
-    connection.execute(
-        "CREATE INDEX IF NOT EXISTS idx_scenes_plan ON scenes(plan_id)"
-    )
+    connection.execute("CREATE INDEX IF NOT EXISTS idx_scenes_plan ON scenes(plan_id)")

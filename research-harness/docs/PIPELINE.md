@@ -27,8 +27,12 @@ Align against the **final audio file**. If the audio changes, the timestamps are
 The importer accepts provider-normalized JSON with segments like this:
 
     {
+      "schema_version": 1,
+      "transcript_id": "T-001",
       "language": "en",
       "audio_path": "narration/final/voice-v001.wav",
+      "audio_sha256": "REPLACE_WITH_REAL_HASH",
+      "duration_seconds": 600.0,
       "segments": [
         {
           "id": "seg-0001",
@@ -43,6 +47,8 @@ The importer accepts provider-normalized JSON with segments like this:
       ]
     }
 
+Each transcript version records the exact audio path, SHA-256, and measured duration. The importer checks the file, fills in the hash if it is absent, and refuses a mismatch. A new narration version gets a new transcript ID; never reuse old timestamps with new audio.
+
 Word-level alignment is useful but can be wrong. Do not assume every provider has the same schema. Put a small provider-specific adapter before this normalized format rather than making the rest of the harness provider-dependent.
 
 ## Phase D: assets to scene plan
@@ -50,9 +56,11 @@ Word-level alignment is useful but can be wrong. Do not assume every provider ha
 The scene planner uses the timed transcript as the primary clock and the database as the source of truth for visuals.
 Each scene states:
 - absolute start/end in seconds
+- the transcript ID, audio SHA-256, and duration copied from the transcript record
 - transcript segment IDs
 - what the viewer should see and why
 - asset IDs, or an explicit generated-graphic specification
+- citation source IDs for any factual visual
 - on-screen text and animation notes
 - citation/attribution requirement
 - confidence and unresolved asset requests
@@ -61,11 +69,12 @@ Prefer reusing an approved catalog asset over a new browser round-trip. An asset
 
 ## Phase E: validate, preview, render
 
-1. Validate scene timing and every referenced asset.
-2. Render a short preview first, for example 20-30 seconds at a smaller frame size.
-3. Review chronology, visual continuity, text clipping, citation overlays, and narration sync.
-4. Render the full video with Hyperframes once the preview is sound.
-5. Save the render command, tool/model versions, scene plan, and output hash in episode logs.
+1. Validate scene timing, the transcript version, the audio hash, every transcript segment ID, every citation source ID, and every referenced asset.
+2. Persist validated scenes and their links in SQLite.
+3. Render a short preview first, for example 20-30 seconds at a smaller frame size.
+4. Review chronology, visual continuity, text clipping, citation overlays, and narration sync.
+5. Render the full video with Hyperframes once the preview is sound.
+6. Save the render command, tool/model versions, scene plan, and output hash in episode logs.
 
 A ten-minute video at 30 fps contains 18,000 frames. On an older i3 laptop, budget for a slow full render and make short previews the default. Do not use the full render as the first debugging tool.
 

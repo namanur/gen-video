@@ -43,7 +43,7 @@ def main() -> int:
         if args.type in ("all", "assets"):
             rows = connection.execute(
                 "SELECT a.asset_id, a.asset_type, a.relative_path, a.description, a.origin_url, "
-                "a.review_status, a.rights_status, GROUP_CONCAT(t.tag, ' ') AS tags "
+                "a.review_status, a.rights_status, a.sha256, GROUP_CONCAT(t.tag, ' ') AS tags "
                 "FROM assets a LEFT JOIN asset_tags t ON t.asset_id=a.asset_id "
                 "GROUP BY a.asset_id ORDER BY a.created_at DESC"
             ).fetchall()

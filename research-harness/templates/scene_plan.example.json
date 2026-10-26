@@ -3,7 +3,9 @@
   "project_slug": "ragebait-001",
   "canvas": {"width": 1920, "height": 1080, "fps": 30},
   "audio": {
+    "transcript_id": "T-001",
     "path": "narration/final/my-voice-v001.wav",
+    "sha256": "REPLACE_WITH_REAL_AUDIO_HASH",
     "duration_seconds": 600
   },
   "scenes": [

@@ -21,25 +21,29 @@ Save locally available PDFs and create page screenshots only for pages actually 
 ### 3. Books and literature researcher
 Find books, literature reviews, meta-analyses, and foundational theories. Record author, title, edition, publisher, year, ISBN/DOI if available, chapter/page and the argument being used. A book mention without verified bibliographic details is a lead, not a citation. Never invent a page number. If a source is only partially accessible, label what was and was not verified.
 
-### 4. Counterevidence researcher
+### 4. Platform and real-world case researcher
+Find current platform documentation, transparency reports, credible journalism, interviews, and concrete examples.
+Separate official platform statements from independent findings. Do not infer internal platform motives from a UI screenshot or a creator's speculation. Record the exact interface state, date, and URL when a platform behavior matters.
+
+### 5. Counterevidence researcher
 Work from the question, not the draft's existing position. Find conflicting results, limitations, alternative causes, and evidence that would change the conclusion. State the strongest reasonable opposing explanation before criticizing it. Do not manufacture balance when evidence is asymmetric.
 
-### 5. Independent analyst
+### 6. Independent analyst
 Build an explanation independently from the collected evidence, then compare it with the other analysis. Mark inference separately from established findings. Look for causal overreach, selection effects, missing base rates, and claims that confuse correlation with causation.
 
-### 6. Fact-checker
+### 7. Fact-checker
 Audit the script sentence by sentence. Each material factual claim needs evidence links and a locator. Classify each claim as verified directly, supported but indirect, contested, inference/opinion, or unsupported. Check numbers, dates, quotations, names, causality, and the context around screenshots. Verify the final wording, not just a related headline.
 
-### 7. Spoken-script editor
+### 8. Spoken-script editor
 Turn the evidence into conversational prose for a person speaking to camera. Prefer the creator's natural explanations, concrete examples, questions, and honest uncertainty. Avoid generic intros, repetitive signposting, fake suspense, and the standard AI cadence of three symmetrical points followed by a tidy moral. Keep an evidence ledger beside the script. Do not create citations or facts to fill a narrative gap.
 
-### 8. Asset curator
+### 9. Asset curator
 For every source worth revisiting, decide what artifact should be kept: source PDF, relevant page screenshot, article screenshot, chart, original image, screen recording, or a note that no visual capture is needed.
 Store files under the episode root. Use readable names and descriptive metadata. Register each file immediately, including source relation and review/rights state. Check whether the exact asset already exists before downloading or capturing again.
 
-### 9. Scene planner
+### 10. Scene planner
 Input: final narration audio, normalized word/segment timestamps, approved assets, evidence ledger.
-Output: scene plan with exact seconds, narration segment references, requested visual role, registered asset IDs, on-screen text, motion notes, and citation/attribution needs.
+Output: scene plan with exact seconds, the transcript ID and audio hash, narration segment references, requested visual role, registered asset IDs, on-screen text, motion notes, and citation/attribution needs.
 Prefer reusing an existing approved asset when it genuinely fits. If a scene needs new material, create an explicit asset request and stop it from being render-ready until the asset has been created and reviewed.
 
 ## Source capture protocol

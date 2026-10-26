@@ -8,6 +8,8 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
+SCHEMA_VERSION = 2
+
 SCHEMA = """
 PRAGMA foreign_keys = ON;
 CREATE TABLE IF NOT EXISTS project_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -32,8 +34,8 @@ CREATE TABLE IF NOT EXISTS assets (
     filename TEXT NOT NULL, description TEXT NOT NULL, origin_url TEXT,
     source_id TEXT REFERENCES sources(source_id) ON DELETE SET NULL, sha256 TEXT NOT NULL,
     mime_type TEXT, capture_method TEXT, rights_status TEXT NOT NULL DEFAULT 'unknown',
-    review_status TEXT NOT NULL DEFAULT 'candidate', created_at TEXT NOT NULL,
-    metadata_json TEXT NOT NULL DEFAULT '{}'
+    review_status TEXT NOT NULL DEFAULT 'candidate', review_note TEXT, reviewed_at TEXT,
+    created_at TEXT NOT NULL, metadata_json TEXT NOT NULL DEFAULT '{}'
 );
 CREATE TABLE IF NOT EXISTS asset_tags (
     asset_id TEXT NOT NULL REFERENCES assets(asset_id) ON DELETE CASCADE,
@@ -44,15 +46,27 @@ CREATE TABLE IF NOT EXISTS citations (
     source_id TEXT NOT NULL REFERENCES sources(source_id) ON DELETE CASCADE,
     locator TEXT NOT NULL, exact_quote TEXT, citation_style TEXT, note TEXT
 );
+CREATE TABLE IF NOT EXISTS transcripts (
+    transcript_id TEXT PRIMARY KEY, audio_path TEXT NOT NULL, audio_sha256 TEXT NOT NULL,
+    duration_seconds REAL NOT NULL, language TEXT NOT NULL DEFAULT 'en',
+    alignment_method TEXT, schema_version INTEGER NOT NULL DEFAULT 1,
+    source_path TEXT, imported_at TEXT NOT NULL, CHECK(duration_seconds > 0)
+);
 CREATE TABLE IF NOT EXISTS transcript_segments (
-    segment_id TEXT PRIMARY KEY, start_seconds REAL NOT NULL, end_seconds REAL NOT NULL,
+    transcript_id TEXT NOT NULL REFERENCES transcripts(transcript_id) ON DELETE CASCADE,
+    segment_id TEXT NOT NULL,
+    start_seconds REAL NOT NULL, end_seconds REAL NOT NULL,
     text TEXT NOT NULL, words_json TEXT NOT NULL DEFAULT '[]', speaker TEXT, confidence REAL,
-    created_at TEXT NOT NULL, CHECK(start_seconds >= 0), CHECK(end_seconds > start_seconds)
+    created_at TEXT NOT NULL, CHECK(start_seconds >= 0), CHECK(end_seconds > start_seconds),
+    PRIMARY KEY (transcript_id, segment_id)
 );
 CREATE TABLE IF NOT EXISTS scenes (
-    scene_id TEXT PRIMARY KEY, start_seconds REAL NOT NULL, end_seconds REAL NOT NULL,
+    scene_id TEXT PRIMARY KEY,
+    transcript_id TEXT REFERENCES transcripts(transcript_id) ON DELETE SET NULL,
+    start_seconds REAL NOT NULL, end_seconds REAL NOT NULL,
     narration_text TEXT, visual_goal TEXT NOT NULL, on_screen_text_json TEXT NOT NULL DEFAULT '[]',
-    status TEXT NOT NULL DEFAULT 'draft', notes TEXT,
+    citation_source_ids_json TEXT NOT NULL DEFAULT '[]',
+    motion TEXT, graphic_spec_json TEXT, status TEXT NOT NULL DEFAULT 'draft', notes TEXT,
     CHECK(start_seconds >= 0), CHECK(end_seconds > start_seconds)
 );
 CREATE TABLE IF NOT EXISTS scene_assets (
@@ -60,6 +74,19 @@ CREATE TABLE IF NOT EXISTS scene_assets (
     asset_id TEXT NOT NULL REFERENCES assets(asset_id) ON DELETE RESTRICT,
     role TEXT NOT NULL DEFAULT 'primary', timing_json TEXT NOT NULL DEFAULT '{}',
     PRIMARY KEY (scene_id, asset_id, role)
+);
+CREATE TABLE IF NOT EXISTS scene_segments (
+    scene_id TEXT NOT NULL REFERENCES scenes(scene_id) ON DELETE CASCADE,
+    transcript_id TEXT NOT NULL,
+    segment_id TEXT NOT NULL,
+    PRIMARY KEY (scene_id, transcript_id, segment_id),
+    FOREIGN KEY (transcript_id, segment_id)
+        REFERENCES transcript_segments(transcript_id, segment_id) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS scene_sources (
+    scene_id TEXT NOT NULL REFERENCES scenes(scene_id) ON DELETE CASCADE,
+    source_id TEXT NOT NULL REFERENCES sources(source_id) ON DELETE CASCADE,
+    PRIMARY KEY (scene_id, source_id)
 );
 CREATE TABLE IF NOT EXISTS activity_log (
     event_id INTEGER PRIMARY KEY AUTOINCREMENT, created_at TEXT NOT NULL, actor TEXT NOT NULL,
@@ -72,16 +99,88 @@ CREATE INDEX IF NOT EXISTS idx_assets_hash ON assets(sha256);
 CREATE INDEX IF NOT EXISTS idx_sources_type ON sources(source_type);
 CREATE INDEX IF NOT EXISTS idx_claims_status ON claims(status);
 CREATE INDEX IF NOT EXISTS idx_transcript_time ON transcript_segments(start_seconds, end_seconds);
+CREATE INDEX IF NOT EXISTS idx_transcript_segments_transcript ON transcript_segments(transcript_id, start_seconds);
 CREATE INDEX IF NOT EXISTS idx_scenes_time ON scenes(start_seconds, end_seconds);
+CREATE INDEX IF NOT EXISTS idx_scenes_transcript ON scenes(transcript_id);
 CREATE INDEX IF NOT EXISTS idx_asset_tags_tag ON asset_tags(tag);
 """
 
 DIRECTORIES = [
-    "research", "sources/pages", "sources/pdfs", "sources/screenshots", "sources/books",
-    "assets/images", "assets/diagrams", "assets/video", "assets/screen-recordings",
-    "assets/audio", "script", "narration/original", "narration/final", "transcript",
-    "edit/hyperframes", "exports", "logs"
+    "research",
+    "sources/pages",
+    "sources/pdfs",
+    "sources/screenshots",
+    "sources/books",
+    "sources/datasets",
+    "sources/metadata",
+    "assets/images",
+    "assets/diagrams",
+    "assets/charts",
+    "assets/video",
+    "assets/screen-recordings",
+    "assets/audio",
+    "assets/thumbnails",
+    "assets/contact-sheets",
+    "script",
+    "script/versions",
+    "narration/original",
+    "narration/final",
+    "narration/tts-input",
+    "narration/tts-config",
+    "transcript",
+    "transcript/provider-original",
+    "transcript/versions",
+    "edit",
+    "edit/hyperframes",
+    "edit/preview",
+    "exports/draft",
+    "exports/final",
+    "logs/research_runs",
+    "logs/agent_handoffs",
+    "logs/render_runs",
+    "logs/errors",
 ]
+
+
+def create_episode(root: str | Path, slug: str, title: str, topic: str,
+                   channel: str = "brain-on-internet") -> tuple[dict, Path]:
+    """Create an episode folder, metadata file, and SQLite catalog."""
+    root = Path(root).expanduser().resolve()
+    db_path = root / "episode.sqlite3"
+    if db_path.exists():
+        raise FileExistsError(f"episode database already exists: {db_path}")
+    for item in DIRECTORIES:
+        (root / item).mkdir(parents=True, exist_ok=True)
+
+    created = datetime.now(timezone.utc).isoformat()
+    metadata = {
+        "schema_version": SCHEMA_VERSION,
+        "slug": slug,
+        "title": title,
+        "topic": topic,
+        "channel": channel,
+        "created_at": created,
+        "status": "research",
+        "target_duration_seconds": 600,
+        "frame": {"width": 1920, "height": 1080, "fps": 30},
+    }
+    (root / "episode.json").write_text(
+        json.dumps(metadata, indent=2, ensure_ascii=False) + chr(10), encoding="utf-8"
+    )
+    with sqlite3.connect(db_path) as connection:
+        connection.executescript(SCHEMA)
+        connection.executemany(
+            "INSERT INTO project_meta(key, value) VALUES(?, ?)",
+            [(key, json.dumps(value, ensure_ascii=False) if isinstance(value, (dict, list)) else str(value))
+             for key, value in metadata.items()]
+        )
+        connection.execute(
+            "INSERT INTO activity_log(created_at, actor, action, entity_type, entity_id, details_json) "
+            "VALUES(?, ?, ?, ?, ?, ?)",
+            (created, "init_episode.py", "episode_initialized", "project", slug,
+             json.dumps({"root": str(root), "schema_version": SCHEMA_VERSION}, ensure_ascii=False))
+        )
+    return metadata, db_path
 
 
 def main() -> int:
@@ -93,35 +192,15 @@ def main() -> int:
     parser.add_argument("--channel", default="brain-on-internet")
     args = parser.parse_args()
 
-    root = Path(args.root).expanduser().resolve()
-    db_path = root / "episode.sqlite3"
-    if db_path.exists():
-        parser.error(f"episode database already exists: {db_path}")
-    for item in DIRECTORIES:
-        (root / item).mkdir(parents=True, exist_ok=True)
+    try:
+        _, db_path = create_episode(
+            root=args.root, slug=args.slug, title=args.title, topic=args.topic,
+            channel=args.channel,
+        )
+    except FileExistsError as error:
+        parser.error(str(error))
 
-    created = datetime.now(timezone.utc).isoformat()
-    metadata = {
-        "slug": args.slug, "title": args.title, "topic": args.topic, "channel": args.channel,
-        "created_at": created, "status": "research", "target_duration_seconds": 600,
-        "frame": {"width": 1920, "height": 1080, "fps": 30}
-    }
-    (root / "episode.json").write_text(json.dumps(metadata, indent=2, ensure_ascii=False) + chr(10),
-                                        encoding="utf-8")
-    with sqlite3.connect(db_path) as connection:
-        connection.executescript(SCHEMA)
-        connection.executemany(
-            "INSERT INTO project_meta(key, value) VALUES(?, ?)",
-            [(key, json.dumps(value, ensure_ascii=False) if isinstance(value, (dict, list)) else str(value))
-             for key, value in metadata.items()]
-        )
-        connection.execute(
-            "INSERT INTO activity_log(created_at, actor, action, entity_type, entity_id, details_json) "
-            "VALUES(?, ?, ?, ?, ?, ?)",
-            (created, "init_episode.py", "episode_initialized", "project", args.slug,
-             json.dumps({"root": str(root)}, ensure_ascii=False))
-        )
-    print(f"Episode initialized: {root}")
+    print(f"Episode initialized: {Path(args.root).expanduser().resolve()}")
     print(f"Database: {db_path}")
     print("No network calls, model calls, or paid API calls were made.")
     return 0

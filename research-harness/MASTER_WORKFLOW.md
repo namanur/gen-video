@@ -203,6 +203,7 @@ Each video gets its own folder. This avoids mixing assets between videos and all
           tts-config/
         transcript/
           timed_transcript.json
+          versions/
           provider-original/
           corrections.json
         edit/
@@ -260,11 +261,16 @@ SQLite is the searchable index, not a replacement for the actual files. The file
 - Review state: candidate, approved, rejected, or rights review.
 - Rights state: unknown, licensed, verified public domain, relevant Creative Commons license, creator-owned, editorial review, fair-use review, restricted, etc.
 
+**Transcripts**
+- Stable transcript version ID.
+- Exact audio path, SHA-256, measured duration, language, and alignment method.
+- Import timestamp and provider or adapter that produced the alignment.
+
 **Transcript segments**
 - Segment ID and start/end time in seconds.
 - Exact recognized or spoken text.
 - Optional word-level timings, speaker, and confidence.
-- Link to the exact final audio version used for alignment.
+- Link to the transcript version and exact final audio used for alignment.
 
 **Scenes**
 - Scene ID and time range.
@@ -487,6 +493,7 @@ Example structure, with illustrative values only:
 
     {
       "schema_version": 1,
+      "transcript_id": "T-001",
       "episode_slug": "ragebait-001",
       "language": "en",
       "audio_path": "narration/final/voice-v001.wav",
@@ -515,11 +522,11 @@ The numbers are illustrative only. Never use example timestamps as actual narrat
 ### Validation requirements
 
 - Segment IDs must be stable and unique.
+- A transcript ID, audio path, and audio hash identify the exact version.
 - Start and end values must be numeric and non-negative, with end greater than start.
 - Segments should be chronological.
 - Word timings, when present, should fit inside their parent segment with a small tolerance.
 - Text should be preserved accurately enough for searching and claim matching.
-- Audio path and hash identify the aligned file.
 - Duration should match the audio within a reasonable tolerance.
 - Alignment confidence and method should be recorded when available.
 - Low-confidence sections should be flagged for human correction rather than silently trusted.
@@ -569,7 +576,9 @@ Do not force an image onto every sentence. A visual should clarify, prove, conte
       "project_slug": "ragebait-001",
       "canvas": {"width": 1920, "height": 1080, "fps": 30},
       "audio": {
+        "transcript_id": "T-001",
         "path": "narration/final/voice-v001.wav",
+        "sha256": "REPLACE_WITH_REAL_HASH",
         "duration_seconds": 600.0
       },
       "scenes": [
@@ -589,7 +598,7 @@ Do not force an image onto every sentence. A visual should clarify, prove, conte
       ]
     }
 
-A scene with no existing asset must include a structured asset request or graphic specification. It must not pretend an asset exists. Final-render validation should reject missing files, unknown asset IDs, rejected assets, unapproved candidates, invalid timing, and scenes with no visual plan.
+A scene with no existing asset must include a structured asset request or graphic specification. It must not pretend an asset exists. Final-render validation should reject missing files, unknown asset IDs, rejected assets, unapproved candidates, invalid timing, stale audio hashes, unknown transcript segment IDs, unknown citation source IDs, and scenes with no visual plan.
 
 ---
 
@@ -683,12 +692,13 @@ Build the system in vertical slices. Every phase should produce a testable resul
 - Create episode folder and SQLite schema.
 - Register sources and assets.
 - Search catalog by text, tags, URL, path, and hash.
-- Import normalized timed transcripts.
-- Validate scene plans and file references.
+- Import normalized timed transcripts with audio path, SHA-256, and duration.
+- Validate scene plans, transcript links, audio identity, citation IDs, and file references.
+- Persist validated scenes and their asset, segment, and source links.
 - Add fixtures and offline tests.
 - Confirm paths are episode-relative and secrets are excluded.
 
-**Exit criterion:** A local episode can store sources/assets, search them, import a timed transcript, and reject an invalid scene plan.
+**Exit criterion:** A local episode can store sources/assets, search them, import a timed transcript tied to a specific audio file, persist validated scenes, and reject an invalid or stale scene plan.
 
 ### Phase 2: Research capture adapter
 

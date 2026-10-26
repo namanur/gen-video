@@ -202,7 +202,8 @@ Each video gets its own folder. This avoids mixing assets between videos and all
           tts-input/
           tts-config/
         transcript/
-          timed_transcript.json
+          TR-EXAMPLE.json
+          versions/
           provider-original/
           corrections.json
         edit/
@@ -260,14 +261,19 @@ SQLite is the searchable index, not a replacement for the actual files. The file
 - Review state: candidate, approved, rejected, or rights review.
 - Rights state: unknown, licensed, verified public domain, relevant Creative Commons license, creator-owned, editorial review, fair-use review, restricted, etc.
 
+**Transcripts**
+- Stable transcript version ID.
+- Exact audio path, SHA-256, measured duration, language, and alignment method.
+- Import timestamp and the adapter or method that produced the alignment.
+
 **Transcript segments**
 - Segment ID and start/end time in seconds.
 - Exact recognized or spoken text.
 - Optional word-level timings, speaker, and confidence.
-- Link to the exact final audio version used for alignment.
+- Link to the transcript version and exact final audio used for alignment.
 
 **Scenes**
-- Scene ID and time range.
+- Scene ID, plan ID, transcript ID, and time range.
 - Related transcript segment IDs.
 - Visual goal, narration text, on-screen text, motion notes.
 - Asset IDs and citation/source IDs.
@@ -486,13 +492,6 @@ The normalized format is the stable handoff between audio and scene planning. It
 Example structure, with illustrative values only:
 
     {
-      "schema_version": 1,
-      "episode_slug": "ragebait-001",
-      "language": "en",
-      "audio_path": "narration/final/voice-v001.wav",
-      "audio_sha256": "REPLACE_WITH_REAL_HASH",
-      "duration_seconds": 600.0,
-      "alignment_method": "forced_alignment",
       "segments": [
         {
           "id": "seg-0001",
@@ -507,19 +506,26 @@ Example structure, with illustrative values only:
             {"text": "start", "start": 0.32, "end": 0.58}
           ]
         }
-      ]
+      ],
+      "audio": {
+        "path": "narration/final/voice-v001.wav",
+        "sha256": "REPLACE_WITH_REAL_HASH",
+        "duration_seconds": 600.0,
+        "language": "en",
+        "alignment_method": "forced_alignment"
+      }
     }
 
-The numbers are illustrative only. Never use example timestamps as actual narration timings.
+The importer receives the exact audio file separately with `--audio`. It measures the duration, hashes the file, checks any matching `audio` metadata in the JSON, and stores a transcript version. The canonical portable copy is written to `transcript/{transcript_id}.json`. The numbers are illustrative only. Never use example timestamps as actual narration timings.
 
 ### Validation requirements
 
-- Segment IDs must be stable and unique.
+- Segment IDs must be stable and unique within a transcript.
+- A transcript ID, audio path, audio hash, and duration identify the exact version.
 - Start and end values must be numeric and non-negative, with end greater than start.
 - Segments should be chronological.
 - Word timings, when present, should fit inside their parent segment with a small tolerance.
 - Text should be preserved accurately enough for searching and claim matching.
-- Audio path and hash identify the aligned file.
 - Duration should match the audio within a reasonable tolerance.
 - Alignment confidence and method should be recorded when available.
 - Low-confidence sections should be flagged for human correction rather than silently trusted.
@@ -566,10 +572,13 @@ Do not force an image onto every sentence. A visual should clarify, prove, conte
 
     {
       "version": 1,
+      "plan_id": "plan-v001",
       "project_slug": "ragebait-001",
+      "transcript_id": "TR-REPLACE_WITH_IMPORTED_TRANSCRIPT_ID",
       "canvas": {"width": 1920, "height": 1080, "fps": 30},
       "audio": {
         "path": "narration/final/voice-v001.wav",
+        "sha256": "REPLACE_WITH_REAL_HASH",
         "duration_seconds": 600.0
       },
       "scenes": [
@@ -589,7 +598,7 @@ Do not force an image onto every sentence. A visual should clarify, prove, conte
       ]
     }
 
-A scene with no existing asset must include a structured asset request or graphic specification. It must not pretend an asset exists. Final-render validation should reject missing files, unknown asset IDs, rejected assets, unapproved candidates, invalid timing, and scenes with no visual plan.
+A scene with no existing asset must include a structured asset request or graphic specification. It must not pretend an asset exists. Validation should reject missing files, unknown asset IDs, rejected assets, unapproved candidates, invalid timing, stale audio hashes, unknown transcript segments, unknown citation source IDs, empty segment lists, and scenes with no visual plan. A passing plan is persisted into the scene-plan, scene, asset-link, segment-link, and citation-link tables.
 
 ---
 
@@ -680,15 +689,16 @@ Build the system in vertical slices. Every phase should produce a testable resul
 
 ### Phase 1: Project memory and local contracts
 
-- Create episode folder and SQLite schema.
-- Register sources and assets.
+- Create episode folder and SQLite schema with idempotent migrations.
+- Register sources and assets, including review notes.
 - Search catalog by text, tags, URL, path, and hash.
-- Import normalized timed transcripts.
-- Validate scene plans and file references.
+- Import normalized timed transcripts tied to an exact audio path, SHA-256, and duration.
+- Validate scene plans, transcript links, audio identity, citation IDs, and file references.
+- Persist validated scene plans and their asset, segment, and source links.
 - Add fixtures and offline tests.
 - Confirm paths are episode-relative and secrets are excluded.
 
-**Exit criterion:** A local episode can store sources/assets, search them, import a timed transcript, and reject an invalid scene plan.
+**Exit criterion:** A local episode can store sources/assets, search them, import a timed transcript tied to a specific audio file, persist validated scenes, and reject an invalid or stale scene plan.
 
 ### Phase 2: Research capture adapter
 

@@ -27,8 +27,6 @@ Align against the **final audio file**. If the audio changes, the timestamps are
 The importer accepts provider-normalized JSON with segments like this:
 
     {
-      "language": "en",
-      "audio_path": "narration/final/voice-v001.wav",
       "segments": [
         {
           "id": "seg-0001",
@@ -40,32 +38,42 @@ The importer accepts provider-normalized JSON with segments like this:
             {"text": "us", "start": 0.19, "end": 0.31}
           ]
         }
-      ]
+      ],
+      "audio": {
+        "path": "narration/final/voice-v001.wav",
+        "sha256": "REPLACE_WITH_REAL_HASH",
+        "duration_seconds": 600.0
+      }
     }
+
+The importer takes the exact audio file with `--audio`, measures its duration, computes its SHA-256, and records a transcript version. If the JSON carries an `audio` object, its path, hash, and duration must match the selected file. The canonical transcript is written to `transcript/{transcript_id}.json`. A new narration version gets a new transcript ID; never reuse old timestamps with new audio.
 
 Word-level alignment is useful but can be wrong. Do not assume every provider has the same schema. Put a small provider-specific adapter before this normalized format rather than making the rest of the harness provider-dependent.
 
 ## Phase D: assets to scene plan
 
 The scene planner uses the timed transcript as the primary clock and the database as the source of truth for visuals.
-Each scene states:
-- absolute start/end in seconds
-- transcript segment IDs
+Each scene plan states:
+- `plan_id` and the exact `transcript_id`
+- the matching audio path, SHA-256, and duration
+- absolute start and end seconds for each scene
+- transcript segment IDs that fit inside the scene time range
 - what the viewer should see and why
 - asset IDs, or an explicit generated-graphic specification
+- citation source IDs for any factual visual
 - on-screen text and animation notes
-- citation/attribution requirement
 - confidence and unresolved asset requests
 
 Prefer reusing an approved catalog asset over a new browser round-trip. An asset description must say what is visibly present, not only repeat the source title. A new image or screen recording must be saved and registered before a render-ready plan references it.
 
 ## Phase E: validate, preview, render
 
-1. Validate scene timing and every referenced asset.
-2. Render a short preview first, for example 20-30 seconds at a smaller frame size.
-3. Review chronology, visual continuity, text clipping, citation overlays, and narration sync.
-4. Render the full video with Hyperframes once the preview is sound.
-5. Save the render command, tool/model versions, scene plan, and output hash in episode logs.
+1. Validate the plan, transcript version, audio hash, transcript segments, citation sources, assets, and timing.
+2. Persist validated scenes and their asset, segment, and source relationships in SQLite. Use `--no-persist` only for a dry run.
+3. Render a short preview first, for example 20-30 seconds at a smaller frame size.
+4. Review chronology, visual continuity, text clipping, citation overlays, and narration sync.
+5. Render the full video with Hyperframes once the preview is sound.
+6. Save the render command, tool/model versions, scene plan, and output hash in episode logs.
 
 A ten-minute video at 30 fps contains 18,000 frames. On an older i3 laptop, budget for a slow full render and make short previews the default. Do not use the full render as the first debugging tool.
 

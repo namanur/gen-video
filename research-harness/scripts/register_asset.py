@@ -41,6 +41,8 @@ def main() -> int:
     parser.add_argument("--capture-method", default="manual")
     parser.add_argument("--rights-status", default="unknown", choices=RIGHTS_STATES)
     parser.add_argument("--review-status", default="candidate", choices=REVIEW_STATES)
+    parser.add_argument("--review-note", default="",
+                        help="Reason for approval, rejection, or rights review")
     parser.add_argument("--tag", action="append", default=[])
     parser.add_argument("--metadata", default="{}", help="Optional JSON object")
     args = parser.parse_args()
@@ -70,6 +72,8 @@ def main() -> int:
 
     with sqlite3.connect(db_path) as connection:
         connection.execute("PRAGMA foreign_keys = ON")
+        from db_contracts import ensure_contract_schema
+        ensure_contract_schema(connection)
         if args.source_id:
             found = connection.execute(
                 "SELECT 1 FROM sources WHERE source_id = ?", (args.source_id,)
@@ -87,11 +91,14 @@ def main() -> int:
         ).fetchone()
         connection.execute(
             "INSERT INTO assets(asset_id, asset_type, relative_path, filename, description, origin_url, "
-            "source_id, sha256, mime_type, capture_method, rights_status, review_status, created_at, metadata_json) "
-            "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "source_id, sha256, mime_type, capture_method, rights_status, review_status, review_note, "
+            "reviewed_at, created_at, metadata_json) "
+            "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (asset_id, args.asset_type, relative, artifact.name, args.description, args.source_url,
              args.source_id, digest, mime_type, args.capture_method, args.rights_status,
-             args.review_status, now, json.dumps(metadata, ensure_ascii=False))
+             args.review_status, args.review_note or None,
+             now if args.review_status != "candidate" or args.review_note else None,
+             now, json.dumps(metadata, ensure_ascii=False))
         )
         for tag in sorted({item.strip().lower() for item in args.tag if item.strip()}):
             connection.execute(
@@ -101,7 +108,8 @@ def main() -> int:
             "INSERT INTO activity_log(created_at, actor, action, entity_type, entity_id, details_json) "
             "VALUES(?, ?, ?, ?, ?, ?)",
             (now, "register_asset.py", "asset_registered", "asset", asset_id,
-             json.dumps({"path": relative, "sha256": digest, "review_status": args.review_status},
+             json.dumps({"path": relative, "sha256": digest, "review_status": args.review_status,
+                         "review_note": args.review_note or None},
                         ensure_ascii=False))
         )
     print(f"Registered {asset_id}: {relative}")

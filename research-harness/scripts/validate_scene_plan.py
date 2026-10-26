@@ -240,6 +240,8 @@ def validate_scene_plan(
             if not isinstance(segment_ids, list):
                 errors.append(f"{prefix} transcript_segment_ids must be an array")
                 segment_ids = []
+            if not segment_ids:
+                errors.append(f"{prefix} needs at least one transcript segment ID")
             if len(segment_ids) != len(set(item for item in segment_ids if isinstance(item, str))):
                 errors.append(f"{prefix} contains duplicate transcript segment IDs")
             for segment_id in segment_ids:
@@ -260,6 +262,8 @@ def validate_scene_plan(
             if not isinstance(citation_ids, list):
                 errors.append(f"{prefix} citation_source_ids must be an array")
                 citation_ids = []
+            if len(citation_ids) != len(set(item for item in citation_ids if isinstance(item, str))):
+                errors.append(f"{prefix} contains duplicate citation source IDs")
             for source_id in citation_ids:
                 if not isinstance(source_id, str):
                     errors.append(f"{prefix} citation_source_ids entries must be strings")

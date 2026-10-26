@@ -74,6 +74,14 @@ def ensure_contract_schema(connection: sqlite3.Connection) -> None:
             connection.execute("ALTER TABLE scenes ADD COLUMN plan_id TEXT")
         if "transcript_id" not in scene_cols:
             connection.execute("ALTER TABLE scenes ADD COLUMN transcript_id TEXT")
+
+    # Asset review history: keep the reason, not only the current state.
+    asset_cols = _columns(connection, "assets")
+    if asset_cols:
+        if "review_note" not in asset_cols:
+            connection.execute("ALTER TABLE assets ADD COLUMN review_note TEXT")
+        if "reviewed_at" not in asset_cols:
+            connection.execute("ALTER TABLE assets ADD COLUMN reviewed_at TEXT")
     connection.execute("""
         CREATE TABLE IF NOT EXISTS scene_citations (
             scene_id TEXT NOT NULL REFERENCES scenes(scene_id) ON DELETE CASCADE,

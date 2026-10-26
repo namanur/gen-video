@@ -32,8 +32,8 @@ CREATE TABLE IF NOT EXISTS assets (
     filename TEXT NOT NULL, description TEXT NOT NULL, origin_url TEXT,
     source_id TEXT REFERENCES sources(source_id) ON DELETE SET NULL, sha256 TEXT NOT NULL,
     mime_type TEXT, capture_method TEXT, rights_status TEXT NOT NULL DEFAULT 'unknown',
-    review_status TEXT NOT NULL DEFAULT 'candidate', created_at TEXT NOT NULL,
-    metadata_json TEXT NOT NULL DEFAULT '{}'
+    review_status TEXT NOT NULL DEFAULT 'candidate', review_note TEXT, reviewed_at TEXT,
+    created_at TEXT NOT NULL, metadata_json TEXT NOT NULL DEFAULT '{}'
 );
 CREATE TABLE IF NOT EXISTS asset_tags (
     asset_id TEXT NOT NULL REFERENCES assets(asset_id) ON DELETE CASCADE,
@@ -104,10 +104,39 @@ CREATE INDEX IF NOT EXISTS idx_asset_tags_tag ON asset_tags(tag);
 """
 
 DIRECTORIES = [
-    "research", "sources/pages", "sources/pdfs", "sources/screenshots", "sources/books",
-    "assets/images", "assets/diagrams", "assets/video", "assets/screen-recordings",
-    "assets/audio", "script", "narration/original", "narration/final", "transcript",
-    "edit/hyperframes", "exports", "logs"
+    "research",
+    "sources/pages",
+    "sources/pdfs",
+    "sources/screenshots",
+    "sources/books",
+    "sources/datasets",
+    "sources/metadata",
+    "assets/images",
+    "assets/diagrams",
+    "assets/charts",
+    "assets/video",
+    "assets/screen-recordings",
+    "assets/audio",
+    "assets/thumbnails",
+    "assets/contact-sheets",
+    "script",
+    "script/versions",
+    "narration/original",
+    "narration/final",
+    "narration/tts-input",
+    "narration/tts-config",
+    "transcript",
+    "transcript/provider-original",
+    "transcript/versions",
+    "edit",
+    "edit/hyperframes",
+    "edit/preview",
+    "exports/draft",
+    "exports/final",
+    "logs/research_runs",
+    "logs/agent_handoffs",
+    "logs/render_runs",
+    "logs/errors",
 ]
 
 

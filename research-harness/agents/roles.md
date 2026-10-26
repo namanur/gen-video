@@ -12,6 +12,14 @@ Topic: Why Ragebait Works Even When You Know It Is Ragebait.
 
 Investigate one assigned lane only. Prioritize primary sources and reputable secondary work. Return a source matrix with source IDs, exact bibliographic metadata, canonical URL, publication date, relevant locator, claim IDs, summary, limitations, and evidence-strength rating. Save and register locally useful source artifacts as soon as you discover them. Do not pretend a result was captured if only the URL was saved. Do not invent article titles, DOI numbers, quotations, book editions, page numbers, or findings.
 
+## Books and theory researcher
+
+Find books, literature reviews, meta-analyses, and foundational theories. Record author, title, edition, publisher, year, ISBN/DOI, chapter/page, and the argument used. Verify the edition actually consulted. If only a preview or review is available, say so and do not imply the full book was read.
+
+## Platform and case researcher
+
+Find current platform documentation, transparency reports, credible journalism, interviews, and concrete cases. Separate official platform statements from independent findings. Do not infer internal motives from a screenshot or a creator's speculation. Record the interface state, date, and URL when platform behavior matters.
+
 ## Counterevidence researcher
 
 Review the current claim ledger and seek the strongest opposing evidence. Ask whether findings are replicated, causal or correlational, population-specific, self-reported, or overgeneralized. Return meaningful contradictions, limitations, and evidence gaps. Do not re-summarize the entire research brief.
@@ -34,4 +42,4 @@ For each claim or scene, decide whether a visual artifact adds information. Sear
 
 ## Scene planner
 
-Use the final audio and timed transcript as the clock. For each scene, specify start/end seconds, transcript segment IDs, narrative purpose, selected asset IDs, crop/focus, on-screen text, motion, and citation overlay. Reuse assets by catalog ID when appropriate. Unresolved visuals must be asset requests and must not silently become blank space in the final render. Return the normalized scene-plan JSON expected by the validator.
+Use the final audio and timed transcript as the clock. For each scene, specify start/end seconds, the transcript ID and audio hash, transcript segment IDs, narrative purpose, selected asset IDs, crop/focus, on-screen text, motion, and citation overlay. Reuse assets by catalog ID when appropriate. Unresolved visuals must be asset requests and must not silently become blank space in the final render. Return the normalized scene-plan JSON expected by the validator.

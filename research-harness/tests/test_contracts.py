@@ -132,12 +132,17 @@ class TestEpisodeSchema(unittest.TestCase):
                         "SELECT name FROM sqlite_master WHERE type='table'"
                     )
                 }
+                asset_columns = {
+                    row[1] for row in connection.execute("PRAGMA table_info(assets)")
+                }
             for table in (
                 "assets", "sources", "claims", "transcripts", "transcript_segments",
                 "scene_plans", "scenes", "scene_assets", "scene_citations",
                 "scene_transcript_segments",
             ):
                 self.assertIn(table, tables)
+            self.assertIn("review_note", asset_columns)
+            self.assertIn("reviewed_at", asset_columns)
 
     def test_legacy_segments_are_archived_not_assumed_to_match_new_audio(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -276,6 +281,16 @@ class TestAudioAndSceneContracts(unittest.TestCase):
         self.assertTrue(any("unknown citation source_id SRC-MISSING" in issue for issue in errors))
         with sqlite3.connect(self.root / "episode.sqlite3") as connection:
             self.assertEqual(connection.execute("SELECT COUNT(*) FROM scenes").fetchone()[0], 0)
+
+    def test_rejects_scene_without_transcript_segment(self):
+        self.write_plan(segment_ids=[])
+        errors, _, _ = scene_validator.validate_scene_plan(self.root, self.plan_path, persist=True)
+        self.assertTrue(any("at least one transcript segment ID" in issue for issue in errors))
+
+    def test_rejects_duplicate_citation_source(self):
+        self.write_plan(citation_source_ids=["SRC-001", "SRC-001"])
+        errors, _, _ = scene_validator.validate_scene_plan(self.root, self.plan_path, persist=True)
+        self.assertTrue(any("duplicate citation source IDs" in issue for issue in errors))
 
 
 if __name__ == "__main__":

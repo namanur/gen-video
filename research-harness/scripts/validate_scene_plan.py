@@ -54,6 +54,8 @@ def validate_scene_plan(
         raise ValueError("scene plan must be an object with a scenes array")
 
     errors: list[str] = []
+    if not plan["scenes"]:
+        errors.append("scenes array must contain at least one scene")
     plan_id = plan.get("plan_id")
     transcript_id = plan.get("transcript_id")
     if not isinstance(plan_id, str) or not plan_id.strip():
@@ -290,9 +292,10 @@ def validate_scene_plan(
                     tuple(existing_ids)
                 ).fetchall()
                 for row in rows:
-                    if row["plan_id"] and row["plan_id"] != plan_id:
+                    if row["plan_id"] != plan_id:
                         errors.append(
-                            f"scene_id {row['scene_id']} is already owned by plan {row['plan_id']}"
+                            f"scene_id {row['scene_id']} already exists outside plan {plan_id} "
+                            f"(current owner: {row['plan_id'] or 'legacy/unassigned'})"
                         )
 
         if not errors and persist:

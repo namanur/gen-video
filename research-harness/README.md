@@ -39,15 +39,23 @@ Import timestamps after the final narration is recorded or generated:
     python3 research-harness/scripts/import_timed_transcript.py \
       --root projects/ragebait-001 \
       --input projects/ragebait-001/transcript/timed_transcript.json \
+      --audio narration/final/my-voice-v001.wav \
+      --alignment-method manual \
       --replace
 
-Validate a scene plan before it is passed to Hyperframes:
+The importer measures WAV duration directly and uses `ffprobe` for other formats when available. For an audio format that cannot be probed, pass `--duration-seconds` from the trusted audio-generation/metadata step. The importer hashes the selected file, checks any supplied hash/path/duration metadata, and stores immutable transcript-version identity in SQLite. `--replace` replaces only the same transcript ID; it does not erase other versions.
+
+Every scene plan must carry `plan_id`, `transcript_id`, and the matching audio path, SHA-256, and duration. Each scene's `transcript_segment_ids` must exist in that transcript and fit inside the scene time range. Every `citation_source_ids` entry must exist in the episode source catalog.
+
+Validate and persist a scene plan before it is passed to Hyperframes:
 
     python3 research-harness/scripts/validate_scene_plan.py \
       --root projects/ragebait-001 \
       --plan projects/ragebait-001/edit/scene_plan.json
 
-The scripts use Python's standard library only. Browser capture, transcription/alignment, Google Cloud TTS, and Hyperframes are separate adapters; episode initialization never invokes models, network calls, or paid APIs.
+A successful scene-plan validation is persisted to SQLite, including scene-to-asset, scene-to-transcript-segment, and scene-to-source relationships. The validator refuses to persist plans whose audio hash, registered transcript, segment IDs, source IDs, asset approvals, or timings do not match.
+
+The scripts use Python's standard library only. Browser capture, transcription/alignment, Google Cloud TTS, and Hyperframes are separate adapters; episode initialization never invokes models, network calls, or paid APIs. Existing timed segments that predate audio-version tracking are archived as unbound legacy data and are never accepted as current transcript evidence.
 
 ## Episode folder
 

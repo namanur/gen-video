@@ -110,6 +110,8 @@ def main() -> int:
                                         encoding="utf-8")
     with sqlite3.connect(db_path) as connection:
         connection.executescript(SCHEMA)
+        from db_contracts import ensure_contract_schema
+        ensure_contract_schema(connection)
         connection.executemany(
             "INSERT INTO project_meta(key, value) VALUES(?, ?)",
             [(key, json.dumps(value, ensure_ascii=False) if isinstance(value, (dict, list)) else str(value))
